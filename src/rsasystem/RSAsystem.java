@@ -2,7 +2,7 @@
  * File name: RSAsystem.java
  * Package name: rsasystem
  * Date created: 8/15/2015
- * Date last modified: 8/20/2015
+ * Date last modified: 10/8/2015
  *
  * Author: Tony Wu (Xiangbo)
  * Email: xb.wu@mail.utoronto.ca
@@ -20,7 +20,10 @@
 
 package rsasystem;
 
+import java.io.BufferedReader;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
@@ -70,7 +73,7 @@ public class RSAsystem {
 	/**
 	 * @param pubKey RSA public key of type BigInteger
 	 * @param exp RSA exponent of type BigInteger
-	 * @param msg text to be encrypted of type String
+	 * @param msg plaintext to be encrypted of type String
 	 * @return the resulting ciphertext of type string
 	 */
 	private static String encrpyt(BigInteger pubKey, BigInteger exp, String msg) {
@@ -81,7 +84,7 @@ public class RSAsystem {
 	 * @param pubKey RSA public key of type BigInteger
 	 * @param priKey RSA private key of type BigInteger
 	 * @param ctext ciphertext of type BigInteger
-	 * @return the resulting unencrypted text of type string
+	 * @return the resulting plaintext of type string
 	 */
 	private static String decrpyt(BigInteger pubKey, BigInteger priKey, BigInteger ctext) {
 		return new String (ctext.modPow(priKey, pubKey).toByteArray());
@@ -89,26 +92,20 @@ public class RSAsystem {
 
 	/**
 	 * @param fileName name of file to write to
-	 * @param holdArray array that holds keys
-	 * @param bits number of bits of keypair
+	 * @param holdArray array of lines to write to file
 	 */
-	private static void toFile(String fileName, String[] holdArray, int bits) {
-		System.out.println("Saving keys to txt file...");
+	private static void toFile(String fileName, String[] holdArray) {
+		System.out.println("Writing to file " + fileName + " now...");
 		PrintWriter writer;
 		try {
 			//create file
 			writer = new PrintWriter(fileName, "UTF-8");
 			//write to file
-			writer.println("START OF " + bits + "-BIT RSA KEYPAIR");
-			writer.println("---PUBLIC KEY:");
-			writer.println(holdArray[0]);
-			writer.println("---EXPONENT:");
-			writer.println(holdArray[1]);
-			writer.println("---PRIVATE KEY:");
-			writer.println(holdArray[2]);
-			writer.println("END OF " + bits + "-BIT RSA KEYPAIR");
+			for (String s: holdArray) {
+				writer.println(s);
+			}
 			writer.close();
-			System.out.println("Done.");
+			System.out.println("Done writing to file.");
 		} catch (FileNotFoundException e) {
 			// FileNotFoundException
 			e.printStackTrace();
@@ -116,6 +113,40 @@ public class RSAsystem {
 			// UnsupportedEncodingException
 			e.printStackTrace();
 		}
+	}
+	
+	/**
+	 * @param fileName name of the file to read from
+	 * @param isText configures method for reading from plaintext or ciphertext
+	 * @return string containing contents of file
+	 */
+	private static String fileToString(String fileName, boolean isText) {
+		String retVal = "";
+		//opens the file to read
+		try(BufferedReader br = new BufferedReader(new FileReader(fileName))) {
+		    StringBuilder sb = new StringBuilder();
+		    String line = br.readLine();
+		    //begins reading with loop
+		    while (line != null) {
+		    	if (!(line.charAt(0) == "#".charAt(0))){
+		    		sb.append(line);
+		    		//adds a newline character in the return string at the end of each line
+		    		if (isText == true) {
+		    			//only with plaintext, not ciphertext
+		    			sb.append(System.lineSeparator());
+		    		}
+		    	}
+		    	line = br.readLine();
+		    }
+		    retVal = sb.toString();
+		} catch (FileNotFoundException e) {
+			// FileNotFoundException
+			e.printStackTrace();
+		} catch (IOException e) {
+			// IOException
+			e.printStackTrace();
+		}
+		return retVal;
 	}
 
 	/**
@@ -128,33 +159,48 @@ public class RSAsystem {
 
 		int bits = 0;
 		String strIn = "";
-
+		String fName = "";
+		
 		while (!(strIn.equals("4"))) {
 			//user input
+			System.out.println("RSA-Crypto-Tool by Tony Wu");
 			System.out.println("(1) generate, (2) encrypt, (3) decrypt, (4) exit");
 			strIn = in.next();
 			//response
 			if (strIn.equals("1")) {
 				//generate keys
+				System.out.println("Select key strength (Default is 1024-bit)");
 				System.out.println("(1) 256-bit, (2) 512-bit, (3) 1024-bit, (4) 2048-bit");
 				strIn = in.next();
 				if (strIn.equals("1")) {
+					System.out.println("Attention: 256-bit RSA keypairs are not secure!");
 					bits = 256;
 				} else if (strIn.equals("2")) {
+					System.out.println("Attention: 512-bit RSA keypairs are not secure!");
 					bits = 512;
 				} else if (strIn.equals("3")) {
 					bits = 1024;
 				} else if (strIn.equals("4")) {
 					bits = 2048;
 				} else {
-					System.out.println("Invalid input! Defaulting to 1024-bit");
+					System.out.println("Invalid input! Defaulting to 1024-bit...");
 					bits = 1024;
 				}
 				System.out.println("Enter full name of txt file you want to save keys to:");
-				strIn = in.next();
+				fName = in.next();
 				System.out.println("Generating keys...");
-				String[] holdArray = keyGen(bits);
-				RSAsystem.toFile(strIn, holdArray, bits);
+				//calls key generation method
+				String[] keyArray = keyGen(bits);
+				String[] holdArray = {"#START OF " + bits + "-BIT RSA KEYPAIR",
+						"#---PUBLIC KEY:", keyArray[0],
+						"#---EXPONENT:", keyArray[1],
+						"#---PRIVATE KEY:", keyArray[2],
+						"#END OF " + bits + "-BIT RSA KEYPAIR"};
+				//writes keys to file
+				RSAsystem.toFile(fName, holdArray);
+				//clear input variable for stability
+				strIn = "";
+				System.out.println("Key generation complete.");
 			} else if (strIn.equals("2")) {
 				//encryption
 				System.out.println("Public key:");
@@ -163,9 +209,19 @@ public class RSAsystem {
 				System.out.println("Exponent:");
 				strIn = in.next();
 				BigInteger exp = new BigInteger(strIn);
-				System.out.println("Message (no spaces):");
-				strIn = in.next();
-				System.out.println(RSAsystem.encrpyt(pubKey, exp, strIn));
+				System.out.println("Due to the nature of RSA, plaintext converted into ASCII values");
+				System.out.println("that are longer than the public key will not work.");
+				System.out.println("Enter full name of txt file that plaintext is stored in:");
+				fName = in.next();
+				strIn = RSAsystem.fileToString(fName, true);
+				System.out.println("Enter full name of txt file you want to save ciphertext to:");
+				fName = in.next();
+				String[] holdArray = {"#START OF CIPHERTEXT", RSAsystem.encrpyt(pubKey, exp, strIn),
+						"#END OF CIPHERTEXT"};
+				RSAsystem.toFile(fName, holdArray);
+				//clear input variable for stability
+				strIn = "";
+				System.out.println("Encryption complete.");
 			} else if (strIn.equals("3")){
 				//decryption
 				System.out.println("Public key:");
@@ -174,10 +230,18 @@ public class RSAsystem {
 				System.out.println("Private key:");
 				strIn = in.next();
 				BigInteger priKey = new BigInteger(strIn);
-				System.out.println("Ciphertext:");
-				strIn = in.next();
+				System.out.println("Enter full name of txt file ciphertext is stored in:");
+				fName = in.next();
+				strIn = RSAsystem.fileToString(fName, false);
+				System.out.println("Enter full name of txt file you want to save plaintext to:");
+				fName = in.next();
 				BigInteger ctext = new BigInteger(strIn);
-				System.out.println(RSAsystem.decrpyt(pubKey, priKey, ctext));
+				String[] holdArray = {"#START OF PLAINTEXT", RSAsystem.decrpyt(pubKey, priKey, ctext),
+					"#END OF PLAINTEXT"};
+				RSAsystem.toFile(fName, holdArray);
+				//clear input variable for stability
+				strIn = "";
+				System.out.println("Decryption complete.");
 			} else if (!(strIn.equals("4"))) {
 				System.out.println("Invalid command!");
 			} else {
