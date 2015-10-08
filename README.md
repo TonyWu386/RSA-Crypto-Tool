@@ -3,7 +3,7 @@ A functional RSA cryptography tool implemented in Java
 Copyright (c) 2015 [Tony Wu], All Right Reserved
 This software is licensed under the GNU GPL v2.0
 
-RSA-Crypto-Tool is an all-in-one RSA cryptography tool. It is capable of encryption, decryption, and generating keypairs of 256, 512, 1024, and 2048 bits.
+RSA-Crypto-Tool is an all-in-one RSA cryptography tool. It is capable of generating keypairs of 256, 512, 1024, and 2048 bits, as well as directly encrypting and decrypting text files.
 
 NOTICE:
 
