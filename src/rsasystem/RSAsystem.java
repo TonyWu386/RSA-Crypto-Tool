@@ -2,7 +2,7 @@
  * File name: RSAsystem.java
  * Package name: rsasystem
  * Date created: 8/15/2015
- * Date last modified: 10/8/2015
+ * Date last modified: 10/9/2015
  *
  * Author: Tony Wu (Xiangbo)
  * Email: xb.wu@mail.utoronto.ca
@@ -27,7 +27,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
-import java.util.Random;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.Scanner;
 
 /**
@@ -37,29 +38,38 @@ import java.util.Scanner;
 
 public class RSAsystem {
 
-	private static Random rng = new Random();
-	private static boolean pass = false;
-
 	/**
 	 * @param bits the number of bit the generated keypair should be;
 	 * this value must be powers of 2 and greater than 8
 	 * @return an array with 1st element being the public key,
 	 * second element being the exponent, and third element being
 	 * the private key
+	 * @throws NoSuchAlgorithmException
 	 */
-	private static String[] keyGen(int bits) {
+	private static String[] keyGen(int bits) throws NoSuchAlgorithmException {
 		//generate primes
-		BigInteger p = BigInteger.probablePrime(bits/2, rng);
-		BigInteger q = BigInteger.probablePrime(bits/2, rng);
+		boolean pass = false;
+		SecureRandom sRNG = SecureRandom.getInstance("SHA1PRNG");
+		BigInteger p;
+		BigInteger q;
+		//ensure that p and q are near certainly prime
+		do {
+			p = BigInteger.probablePrime(bits/2, sRNG);
+		} while (!(p.isProbablePrime(1000)));
+		do {
+			q = BigInteger.probablePrime(bits/2, sRNG);
+		} while (!(p.isProbablePrime(1000)));
 		//generate public key
 		BigInteger n = p.multiply(q);
 		//begin generating private key
 		BigInteger totient = ((p.subtract(new BigInteger("1"))).multiply(q.subtract(new BigInteger("1"))));
 		BigInteger e = null;
-		//ensure exponent is valid
+		//picks exponent and ensures that it is valid
 		while (pass == false) {
-			e = BigInteger.probablePrime(8, rng);
-			if (totient.mod(e) != new BigInteger("0")) {
+			do {
+				e = BigInteger.probablePrime(16, sRNG);
+			} while (!(e.isProbablePrime(1000)));
+			if ((totient.mod(e) != new BigInteger("0"))&&(e.compareTo(totient) == -1)) {
 				pass = true;
 			}
 		}
@@ -93,28 +103,22 @@ public class RSAsystem {
 	/**
 	 * @param fileName name of file to write to
 	 * @param holdArray array of lines to write to file
+	 * @throws UnsupportedEncodingException 
+	 * @throws FileNotFoundException 
 	 */
-	private static void toFile(String fileName, String[] holdArray) {
+	private static void toFile(String fileName, String[] holdArray) throws FileNotFoundException, UnsupportedEncodingException {
 		System.out.println("Writing to file " + fileName + " now...");
 		PrintWriter writer;
-		try {
-			//create file
-			writer = new PrintWriter(fileName, "UTF-8");
-			//write to file
-			for (String s: holdArray) {
-				writer.println(s);
-			}
-			writer.close();
-			System.out.println("Done writing to file.");
-		} catch (FileNotFoundException e) {
-			// FileNotFoundException
-			e.printStackTrace();
-		} catch (UnsupportedEncodingException e) {
-			// UnsupportedEncodingException
-			e.printStackTrace();
+		//create file
+		writer = new PrintWriter(fileName, "UTF-8");
+		//write to file
+		for (String s: holdArray) {
+			writer.println(s);
 		}
+		writer.close();
+		System.out.println("Done writing to file.");
 	}
-	
+
 	/**
 	 * @param fileName name of the file to read from
 	 * @param isText configures method for reading from plaintext or ciphertext
@@ -151,9 +155,12 @@ public class RSAsystem {
 
 	/**
 	 * @param args
+	 * @throws NoSuchAlgorithmException 
+	 * @throws UnsupportedEncodingException 
+	 * @throws FileNotFoundException 
 	 */
 
-	public static void main(String[] args){
+	public static void main(String[] args) throws NoSuchAlgorithmException, FileNotFoundException, UnsupportedEncodingException{
 
 		Scanner in = new Scanner(System.in);
 
